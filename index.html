@@ -186,7 +186,7 @@
       <h1>🐶 Puppy Weight Tracker</h1>
       <p class="subtitle">Record daily weights for each newborn puppy and watch them grow.</p>
     </div>
-    <span id="syncStatus" class="status-pill">not configured</span>
+    <span id="syncStatus" class="status-pill" title="Click to show sync settings" style="cursor:pointer;">not configured</span>
   </div>
 
   <div class="card">
@@ -219,7 +219,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div id="syncCard" class="card" hidden>
     <h2>GitHub Sync</h2>
     <div class="grid-2" style="margin-top:12px;">
       <div class="field"><label>Owner</label><input id="ghOwner" type="text" /></div>
@@ -846,6 +846,11 @@ document.getElementById("ghSaveBtn").onclick = () => {
   sync.autoPush = document.getElementById("ghAutoPush").checked;
   saveSync();
   setSyncStatus(syncConfigured() ? "saved" : "not configured", syncConfigured() ? "ok" : "");
+};
+document.getElementById("syncStatus").onclick = () => {
+  const card = document.getElementById("syncCard");
+  card.hidden = !card.hidden;
+  if (!card.hidden) card.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 document.getElementById("ghPullBtn").onclick = () => pull();
 document.getElementById("ghPushBtn").onclick = () => push();
