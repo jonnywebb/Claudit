@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Puppy Weight Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #fdf6f0;
+    --card: #ffffff;
+    --primary: #d4756b;
+    --primary-dark: #b85d54;
+    --accent: #f4a261;
+    --text: #2c3e50;
+    --muted: #6c757d;
+    --border: #e9ecef;
+    --danger: #dc3545;
+    --success: #28a745;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.5;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { color: var(--primary-dark); margin: 0 0 4px 0; }
+  .subtitle { color: var(--muted); margin-bottom: 24px; }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  h2 { margin-top: 0; color: var(--primary-dark); font-size: 1.2rem; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input, select, button {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: white;
+  }
+  input:focus, select:focus { outline: 2px solid var(--primary); border-color: var(--primary); }
+  button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+  button:hover { background: var(--primary-dark); }
+  button.secondary { background: #6c757d; }
+  button.secondary:hover { background: #5a6268; }
+  button.danger { background: var(--danger); }
+  button.danger:hover { background: #b02a37; }
+  button.small { padding: 4px 8px; font-size: 12px; }
+  .puppy-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0 0;
+  }
+  .puppy-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    margin-bottom: 6px;
+  }
+  .puppy-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+  }
+  .color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .empty {
+    color: var(--muted);
+    font-style: italic;
+    padding: 12px;
+    text-align: center;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  th { background: var(--bg); font-weight: 600; }
+  td input { width: 100px; padding: 4px 6px; font-size: 13px; }
+  td.actions { white-space: nowrap; }
+  .chart-wrap { position: relative; height: 420px; }
+  label { font-size: 13px; color: var(--muted); margin-right: 4px; }
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .unit-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .unit-toggle button {
+    background: white;
+    color: var(--text);
+    border-radius: 0;
+    padding: 6px 12px;
+  }
+  .unit-toggle button.active {
+    background: var(--primary);
+    color: white;
+  }
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .tab-bar button {
+    background: white;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+  }
+  .tab-bar button.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-weight: 500; color: var(--text); }
+  .status-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: var(--border);
+    color: var(--muted);
+  }
+  .status-pill.ok { background: #d4edda; color: #155724; }
+  .status-pill.err { background: #f8d7da; color: #721c24; }
+  .status-pill.pending { background: #fff3cd; color: #856404; }
+  .checkbox-row { display: flex; align-items: center; gap: 6px; }
+  .warn {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #5d4400;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header-row">
+    <div>
+      <h1>🐶 Puppy Weight Tracker</h1>
+      <p class="subtitle">Record daily weights for each newborn puppy and watch them grow.</p>
+    </div>
+    <span id="syncStatus" class="status-pill">not configured</span>
+  </div>
+
+  <div class="card">
+    <div class="header-row">
+      <h2>Puppies</h2>
+      <div class="unit-toggle" id="unitToggle">
+        <button data-unit="oz" class="active">Ounces</button>
+        <button data-unit="g">Grams</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top: 12px;">
+      <input id="newPuppyName" type="text" placeholder="Puppy name" />
+      <label for="newPuppyDob">Birthday</label>
+      <input id="newPuppyDob" type="date" />
+      <button id="addPuppyBtn">Add puppy</button>
+    </div>
+    <ul id="puppyList" class="puppy-list"></ul>
+  </div>
+
+  <div class="card">
+    <h2>Record / Edit Weights</h2>
+    <div id="puppyTabs" class="tab-bar"></div>
+    <div id="weightArea"></div>
+  </div>
+
+  <div class="card">
+    <h2>Growth Chart</h2>
+    <div class="chart-wrap">
+      <canvas id="growthChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>GitHub Sync</h2>
+    <div class="grid-2" style="margin-top:12px;">
+      <div class="field"><label>Owner</label><input id="ghOwner" type="text" /></div>
+      <div class="field"><label>Repo</label><input id="ghRepo" type="text" /></div>
+      <div class="field"><label>Branch</label><input id="ghBranch" type="text" /></div>
+      <div class="field"><label>File path</label><input id="ghPath" type="text" /></div>
+    </div>
+    <div class="field" style="margin-top:8px;">
+      <label>Personal Access Token (fine-grained, Contents: Read & write)</label>
+      <input id="ghToken" type="password" autocomplete="off" placeholder="ghp_… or github_pat_…" />
+    </div>
+    <div class="row" style="margin-top:12px;">
+      <label class="checkbox-row"><input id="ghAutoPush" type="checkbox" /> Auto-push after edits</label>
+      <button id="ghSaveBtn">Save settings</button>
+      <button id="ghPullBtn" class="secondary">Pull now</button>
+      <button id="ghPushBtn" class="secondary">Push now</button>
+      <button id="ghQrBtn" class="secondary">Show QR for other device</button>
+    </div>
+    <div id="qrBox" style="display:none; margin-top:12px; text-align:center;">
+      <div id="qrCanvas" style="display:inline-block; padding:12px; background:white; border:1px solid var(--border); border-radius:6px;"></div>
+      <p style="font-size:12px; color:var(--muted); margin:8px 0 0 0;">
+        Scan from another device. The token is encoded in the URL fragment — don't share this QR publicly.
+      </p>
+    </div>
+    <div class="warn">
+      Token is stored locally in your browser. To set up a new device, click "Show QR" here and scan it from the new device — that opens the page with the token pre-filled.
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "puppyTracker.v1";
+const SYNC_KEY = "puppyTracker.sync";
+const PALETTE = [
+  "#d4756b", "#f4a261", "#2a9d8f", "#264653", "#e76f51",
+  "#6a994e", "#bc4749", "#7209b7", "#3a86ff", "#fb8500"
+];
+
+// Token is NOT baked into the source. It is delivered to each device via a
+// magic link with the token in the URL hash fragment (#token=...). On first
+// load we save it to localStorage and strip it from the URL.
+const DEFAULT_TOKEN = "";
+
+const state = loadState();
+const sync = loadSync();
+consumeHashToken();
+
+function consumeHashToken() {
+  const m = location.hash.match(/(?:^#|&)token=([^&]+)/);
+  if (!m) return;
+  try {
+    sync.token = decodeURIComponent(m[1]);
+    saveSync();
+  } catch (e) {}
+  // Strip the fragment from the visible URL without leaving a history entry.
+  history.replaceState(null, "", location.pathname + location.search);
+}
+let activePuppyId = state.puppies[0]?.id ?? null;
+let unit = state.unit || "oz";
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { console.warn("Failed to load state", e); }
+  return { puppies: [], unit: "oz" };
+}
+
+function saveState() {
+  state.unit = unit;
+  state.lastModified = new Date().toISOString();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  schedulePush();
+}
+
+function loadSync() {
+  const defaults = {
+    owner: "jonnywebb",
+    repo: "Claudit",
+    branch: "main",
+    path: "data.json",
+    token: DEFAULT_TOKEN,
+    autoPush: true,
+    lastSha: null
+  };
+  let stored = {};
+  try {
+    const raw = localStorage.getItem(SYNC_KEY);
+    if (raw) stored = JSON.parse(raw) || {};
+  } catch (e) {}
+  // Fill any missing/blank string field from defaults so stale localStorage
+  // entries don't render an empty config form.
+  const merged = { ...defaults, ...stored };
+  for (const k of ["owner", "repo", "branch", "path", "token"]) {
+    if (!merged[k]) merged[k] = defaults[k];
+  }
+  return merged;
+}
+function saveSync() { localStorage.setItem(SYNC_KEY, JSON.stringify(sync)); }
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function todayISO() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function colorForIndex(i) { return PALETTE[i % PALETTE.length]; }
+
+// ---- Puppy management ----
+function addPuppy(name, dob) {
+  const trimmed = name.trim();
+  if (!trimmed) { alert("Please enter a name."); return; }
+  if (!dob) { alert("Please pick a birthday."); return; }
+  const puppy = {
+    id: uid(),
+    name: trimmed,
+    dob: dob,
+    color: colorForIndex(state.puppies.length),
+    weights: {} // { "YYYY-MM-DD": number-in-oz }
+  };
+  state.puppies.push(puppy);
+  if (!activePuppyId) activePuppyId = puppy.id;
+  saveState();
+  renderAll();
+}
+
+function setBirthday(id) {
+  const p = state.puppies.find(x => x.id === id);
+  if (!p) return;
+  const current = p.dob || todayISO();
+  const next = prompt("Birthday (YYYY-MM-DD):", current);
+  if (next && /^\d{4}-\d{2}-\d{2}$/.test(next)) {
+    p.dob = next;
+    saveState();
+    renderAll();
+  } else if (next) {
+    alert("Please use YYYY-MM-DD format.");
+  }
+}
+
+function removePuppy(id) {
+  if (!confirm("Remove this puppy and all of its weight records?")) return;
+  state.puppies = state.puppies.filter(p => p.id !== id);
+  if (activePuppyId === id) activePuppyId = state.puppies[0]?.id ?? null;
+  saveState();
+  renderAll();
+}
+
+function renamePuppy(id) {
+  const p = state.puppies.find(x => x.id === id);
+  if (!p) return;
+  const newName = prompt("New name:", p.name);
+  if (newName && newName.trim()) {
+    p.name = newName.trim();
+    saveState();
+    renderAll();
+  }
+}
+
+// ---- Weight entries ----
+function setWeight(puppyId, dateISO, valueInCurrentUnit) {
+  const p = state.puppies.find(x => x.id === puppyId);
+  if (!p) return;
+  if (valueInCurrentUnit === "" || valueInCurrentUnit == null) {
+    delete p.weights[dateISO];
+  } else {
+    const n = Number(valueInCurrentUnit);
+    if (!isFinite(n) || n <= 0) return;
+    // store internally in oz
+    p.weights[dateISO] = unit === "oz" ? n : n / 28.3495;
+  }
+  saveState();
+  renderWeightTable();
+  renderChart();
+}
+
+function deleteWeight(puppyId, dateISO) {
+  const p = state.puppies.find(x => x.id === puppyId);
+  if (!p) return;
+  delete p.weights[dateISO];
+  saveState();
+  renderWeightTable();
+  renderChart();
+}
+
+function displayWeight(ozValue) {
+  if (ozValue == null) return "";
+  return unit === "oz" ? ozValue.toFixed(2) : (ozValue * 28.3495).toFixed(1);
+}
+
+// ---- Rendering ----
+function renderPuppyList() {
+  const ul = document.getElementById("puppyList");
+  ul.innerHTML = "";
+  if (state.puppies.length === 0) {
+    ul.innerHTML = '<li class="empty">No puppies yet — add one above.</li>';
+    return;
+  }
+  state.puppies.forEach(p => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span class="puppy-name">
+        <span class="color-dot" style="background:${p.color}"></span>
+        ${escapeHtml(p.name)}
+        <span style="color:var(--muted); font-weight:400; font-size:12px;">
+          ${p.dob ? "born " + p.dob : "no birthday set"}
+        </span>
+      </span>
+      <span>
+        <button class="small secondary" data-action="dob" data-id="${p.id}">Birthday</button>
+        <button class="small secondary" data-action="rename" data-id="${p.id}">Rename</button>
+        <button class="small danger" data-action="remove" data-id="${p.id}">Remove</button>
+      </span>
+    `;
+    ul.appendChild(li);
+  });
+}
+
+function renderTabs() {
+  const tabs = document.getElementById("puppyTabs");
+  tabs.innerHTML = "";
+  if (state.puppies.length === 0) {
+    tabs.innerHTML = '<span class="empty">Add a puppy to start recording weights.</span>';
+    return;
+  }
+  state.puppies.forEach(p => {
+    const btn = document.createElement("button");
+    btn.textContent = p.name;
+    if (p.id === activePuppyId) btn.classList.add("active");
+    btn.onclick = () => {
+      activePuppyId = p.id;
+      renderTabs();
+      renderWeightTable();
+    };
+    tabs.appendChild(btn);
+  });
+}
+
+function datesFromTo(startISO, endISO) {
+  const out = [];
+  const start = new Date(startISO + "T00:00:00");
+  const end = new Date(endISO + "T00:00:00");
+  if (isNaN(start) || isNaN(end) || start > end) return out;
+  const cur = new Date(start);
+  while (cur <= end) {
+    const y = cur.getFullYear();
+    const m = String(cur.getMonth() + 1).padStart(2, "0");
+    const d = String(cur.getDate()).padStart(2, "0");
+    out.push(`${y}-${m}-${d}`);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
+function renderWeightTable() {
+  const area = document.getElementById("weightArea");
+  area.innerHTML = "";
+  if (!activePuppyId) return;
+  const puppy = state.puppies.find(p => p.id === activePuppyId);
+  if (!puppy) return;
+
+  if (!puppy.dob) {
+    const msg = document.createElement("p");
+    msg.className = "empty";
+    msg.innerHTML = `No birthday set for <b>${escapeHtml(puppy.name)}</b>. Click "Birthday" in the puppies list above to set one.`;
+    area.appendChild(msg);
+    return;
+  }
+
+  const today = todayISO();
+  const dates = datesFromTo(puppy.dob, today);
+  if (dates.length === 0) {
+    const msg = document.createElement("p");
+    msg.className = "empty";
+    msg.textContent = "Birthday is in the future — no days to log yet.";
+    area.appendChild(msg);
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Day</th>
+        <th>Weight (${unit})</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector("tbody");
+
+  dates.forEach((date, idx) => {
+    const dayNum = idx + 1;
+    const recorded = puppy.weights[date];
+    const tr = document.createElement("tr");
+    if (date === today) tr.style.background = "#fff8e1";
+    tr.innerHTML = `
+      <td>${date}${date === today ? " <span style='color:var(--muted);font-size:12px;'>(today)</span>" : ""}</td>
+      <td>Day ${dayNum}</td>
+      <td><input type="number" step="0.01" min="0" data-date="${date}" value="${recorded != null ? displayWeight(recorded) : ""}" placeholder="—" /></td>
+      <td class="actions">
+        ${recorded != null ? `<button class="small danger" data-delete="${date}">Clear</button>` : ""}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  area.appendChild(table);
+
+  // Save inline on blur or Enter
+  tbody.querySelectorAll("input[data-date]").forEach(input => {
+    const commit = () => {
+      const date = input.dataset.date;
+      const original = puppy.weights[date];
+      const newVal = input.value.trim();
+      if (newVal === "" && original == null) return; // nothing to do
+      if (newVal === "" && original != null) {
+        deleteWeight(puppy.id, date);
+        return;
+      }
+      const asNumber = Number(newVal);
+      if (!isFinite(asNumber) || asNumber <= 0) return;
+      // Only save if changed
+      const newOz = unit === "oz" ? asNumber : asNumber / 28.3495;
+      if (original != null && Math.abs(original - newOz) < 1e-6) return;
+      setWeight(puppy.id, date, newVal);
+    };
+    input.addEventListener("blur", commit);
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+    });
+  });
+
+  tbody.querySelectorAll("[data-delete]").forEach(btn => {
+    btn.onclick = () => deleteWeight(puppy.id, btn.dataset.delete);
+  });
+}
+
+let chart;
+function renderChart() {
+  const ctx = document.getElementById("growthChart").getContext("2d");
+
+  // Build a unified date axis: from earliest birthday (or earliest weight) through today
+  const candidates = [];
+  state.puppies.forEach(p => {
+    if (p.dob) candidates.push(p.dob);
+    Object.keys(p.weights).forEach(d => candidates.push(d));
+  });
+  let labels = [];
+  if (candidates.length) {
+    const earliest = candidates.sort()[0];
+    labels = datesFromTo(earliest, todayISO());
+  }
+
+  const datasets = state.puppies.map(p => ({
+    label: p.name,
+    data: labels.map(d => {
+      const v = p.weights[d];
+      return v == null ? null : Number(displayWeight(v));
+    }),
+    borderColor: p.color,
+    backgroundColor: p.color + "33",
+    spanGaps: true,
+    tension: 0.25,
+    pointRadius: 4,
+    pointHoverRadius: 6
+  }));
+
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "top" },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} ${unit}`
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: "Date" } },
+        y: {
+          title: { display: true, text: `Weight (${unit})` },
+          beginAtZero: false
+        }
+      }
+    }
+  });
+
+  if (labels.length === 0) {
+    // draw a friendly empty message via plugin-free overlay
+    const c = document.getElementById("growthChart");
+    const g = c.getContext("2d");
+    g.save();
+    g.fillStyle = "#6c757d";
+    g.font = "italic 14px sans-serif";
+    g.textAlign = "center";
+    g.fillText("No weights recorded yet — add some to see growth.", c.width / 2, c.height / 2);
+    g.restore();
+  }
+}
+
+function renderAll() {
+  renderPuppyList();
+  renderTabs();
+  renderWeightTable();
+  renderChart();
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+
+// ---- Event wiring ----
+document.getElementById("newPuppyDob").value = todayISO();
+document.getElementById("addPuppyBtn").onclick = () => {
+  const nameInput = document.getElementById("newPuppyName");
+  const dobInput = document.getElementById("newPuppyDob");
+  addPuppy(nameInput.value, dobInput.value);
+  nameInput.value = "";
+  // keep dob as-is so littermates with the same birthday are easy to add
+  nameInput.focus();
+};
+["newPuppyName", "newPuppyDob"].forEach(id => {
+  document.getElementById(id).addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("addPuppyBtn").click();
+  });
+});
+
+document.getElementById("puppyList").addEventListener("click", e => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  if (btn.dataset.action === "remove") removePuppy(id);
+  if (btn.dataset.action === "rename") renamePuppy(id);
+  if (btn.dataset.action === "dob") setBirthday(id);
+});
+
+document.getElementById("unitToggle").addEventListener("click", e => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  unit = btn.dataset.unit;
+  document.querySelectorAll("#unitToggle button").forEach(b => b.classList.toggle("active", b === btn));
+  saveState();
+  renderWeightTable();
+  renderChart();
+});
+
+// ---- GitHub sync ----
+const b64encode = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+const b64decode = (b) => new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\n/g, "")), c => c.charCodeAt(0)));
+
+function setSyncStatus(msg, kind) {
+  const el = document.getElementById("syncStatus");
+  el.textContent = msg;
+  el.className = "status-pill" + (kind ? " " + kind : "");
+}
+
+function syncConfigured() {
+  return sync.owner && sync.repo && sync.branch && sync.path && sync.token;
+}
+
+async function ghGet() {
+  const url = `https://api.github.com/repos/${sync.owner}/${sync.repo}/contents/${encodeURIComponent(sync.path)}?ref=${encodeURIComponent(sync.branch)}`;
+  const r = await fetch(url, { headers: {
+    Authorization: `Bearer ${sync.token}`,
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  }});
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error("GET " + r.status + ": " + (await r.text()).slice(0, 200));
+  const j = await r.json();
+  return { sha: j.sha, content: b64decode(j.content) };
+}
+
+async function ghPut(jsonText, message) {
+  const url = `https://api.github.com/repos/${sync.owner}/${sync.repo}/contents/${encodeURIComponent(sync.path)}`;
+  const body = {
+    message: message || "Update puppy weights",
+    content: b64encode(jsonText),
+    branch: sync.branch
+  };
+  if (sync.lastSha) body.sha = sync.lastSha;
+  const r = await fetch(url, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${sync.token}`,
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) {
+    const txt = (await r.text()).slice(0, 300);
+    if (r.status === 409 || r.status === 422) throw new Error("Conflict — Pull first, then Push. " + txt);
+    throw new Error("PUT " + r.status + ": " + txt);
+  }
+  const j = await r.json();
+  sync.lastSha = j.content.sha;
+  saveSync();
+}
+
+async function pull({ silent } = {}) {
+  if (!syncConfigured()) { setSyncStatus("not configured"); return; }
+  setSyncStatus("pulling…", "pending");
+  try {
+    const remote = await ghGet();
+    if (!remote) {
+      setSyncStatus("no remote file yet — Push to create", "pending");
+      return;
+    }
+    sync.lastSha = remote.sha; saveSync();
+    let remoteState;
+    try { remoteState = JSON.parse(remote.content); }
+    catch (e) { throw new Error("remote file is not valid JSON"); }
+    const remoteTime = remoteState.lastModified || "";
+    const localTime = state.lastModified || "";
+    if (!silent && localTime && remoteTime && localTime > remoteTime) {
+      if (!confirm("Local data is newer than remote. Replace local with remote anyway?")) {
+        setSyncStatus("pull cancelled", "pending");
+        return;
+      }
+    }
+    state.puppies = remoteState.puppies || [];
+    state.unit = remoteState.unit || "oz";
+    state.lastModified = remoteState.lastModified || new Date().toISOString();
+    unit = state.unit;
+    document.querySelectorAll("#unitToggle button").forEach(b => b.classList.toggle("active", b.dataset.unit === unit));
+    activePuppyId = state.puppies.find(p => p.id === activePuppyId)?.id ?? state.puppies[0]?.id ?? null;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    markClean();
+    renderAll();
+  } catch (e) {
+    setSyncStatus("⚠ pull failed: " + e.message, "err");
+  }
+}
+
+async function push({ silent } = {}) {
+  if (!syncConfigured()) { setSyncStatus("⚠ not configured", "err"); throw new Error("not configured"); }
+  if (!silent) setSyncStatus("pushing…", "pending");
+  try {
+    if (sync.lastSha == null) {
+      const remote = await ghGet();
+      if (remote) sync.lastSha = remote.sha;
+    }
+    await ghPut(JSON.stringify(state, null, 2), "Update puppy weights");
+    markClean();
+  } catch (e) {
+    setSyncStatus("⚠ push failed: " + e.message, "err");
+    throw e;
+  }
+}
+
+let dirty = false;
+function markDirty() {
+  dirty = true;
+  if (!syncConfigured()) {
+    setSyncStatus("⚠ unsynced (sync not configured)", "err");
+  } else if (!sync.autoPush) {
+    setSyncStatus("⚠ unsynced — click Push", "err");
+  } else {
+    setSyncStatus("⚠ unsynced — pushing…", "pending");
+  }
+}
+function markClean() {
+  dirty = false;
+  setSyncStatus("✓ synced " + new Date().toLocaleTimeString(), "ok");
+}
+
+let pushTimer, pushAttempt = 0;
+function schedulePush() {
+  markDirty();
+  if (!sync.autoPush || !syncConfigured()) return;
+  clearTimeout(pushTimer);
+  const delay = Math.min(2000 * Math.pow(2, pushAttempt), 30000);
+  pushTimer = setTimeout(async () => {
+    try {
+      await push({ silent: true });
+      pushAttempt = 0;
+    } catch (e) {
+      pushAttempt++;
+      if (pushAttempt <= 4) schedulePush();
+    }
+  }, delay);
+}
+
+window.addEventListener("beforeunload", e => {
+  if (dirty) {
+    e.preventDefault();
+    e.returnValue = "You have unsynced changes — leave anyway?";
+    return e.returnValue;
+  }
+});
+
+// Populate sync UI from saved settings
+(function initSyncUI() {
+  document.getElementById("ghOwner").value = sync.owner || "";
+  document.getElementById("ghRepo").value = sync.repo || "";
+  document.getElementById("ghBranch").value = sync.branch || "main";
+  document.getElementById("ghPath").value = sync.path || "data.json";
+  document.getElementById("ghToken").value = sync.token || "";
+  document.getElementById("ghAutoPush").checked = !!sync.autoPush;
+  setSyncStatus(syncConfigured() ? "ready" : "not configured", syncConfigured() ? "ok" : "");
+})();
+
+document.getElementById("ghSaveBtn").onclick = () => {
+  sync.owner = document.getElementById("ghOwner").value.trim();
+  sync.repo = document.getElementById("ghRepo").value.trim();
+  sync.branch = document.getElementById("ghBranch").value.trim() || "main";
+  sync.path = document.getElementById("ghPath").value.trim() || "data.json";
+  const newToken = document.getElementById("ghToken").value.trim();
+  if (newToken !== sync.token) sync.lastSha = null; // force re-fetch sha
+  sync.token = newToken;
+  sync.autoPush = document.getElementById("ghAutoPush").checked;
+  saveSync();
+  setSyncStatus(syncConfigured() ? "saved" : "not configured", syncConfigured() ? "ok" : "");
+};
+document.getElementById("ghPullBtn").onclick = () => pull();
+document.getElementById("ghPushBtn").onclick = () => push();
+document.getElementById("ghQrBtn").onclick = () => {
+  const box = document.getElementById("qrBox");
+  if (box.style.display !== "none") { box.style.display = "none"; return; }
+  if (!sync.token) { alert("Paste your token and click Save first."); return; }
+  if (location.protocol === "file:") {
+    if (!confirm("You're viewing a local file (file://). The QR will only be useful once this app is hosted (e.g. GitHub Pages). Show anyway?")) return;
+  }
+  const url = location.origin + location.pathname + "#token=" + encodeURIComponent(sync.token);
+  const qr = qrcode(0, "M");
+  qr.addData(url);
+  qr.make();
+  document.getElementById("qrCanvas").innerHTML = qr.createSvgTag({ scalable: true, cellSize: 6, margin: 2 });
+  box.style.display = "block";
+};
+
+// On startup: pull if configured, otherwise just render
+if (syncConfigured()) {
+  pull({ silent: true });
+}
+
+renderAll();
+</script>
+</body>
+</html>
