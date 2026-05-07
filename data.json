@@ -6,8 +6,15 @@
       "dob": "2026-05-01",
       "color": "#d4756b",
       "weights": {}
+    },
+    {
+      "id": "movtpi8cr0fu8",
+      "name": "Wishbone",
+      "dob": "2026-05-01",
+      "color": "#f4a261",
+      "weights": {}
     }
   ],
   "unit": "oz",
-  "lastModified": "2026-05-07T18:32:07.968Z"
+  "lastModified": "2026-05-07T18:32:16.524Z"
 }
