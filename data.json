@@ -64,9 +64,11 @@
       "name": "Isabella",
       "dob": "2026-05-01",
       "color": "#e76f51",
-      "weights": {}
+      "weights": {
+        "2026-05-01": 1
+      }
     }
   ],
   "unit": "oz",
-  "lastModified": "2026-05-07T18:33:21.576Z"
+  "lastModified": "2026-05-07T18:33:25.630Z"
 }
