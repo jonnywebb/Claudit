@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Puppy Weight Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
   :root {
     --bg: #fdf6f0;
@@ -237,16 +236,16 @@
       <button id="ghSaveBtn">Save settings</button>
       <button id="ghPullBtn" class="secondary">Pull now</button>
       <button id="ghPushBtn" class="secondary">Push now</button>
-      <button id="ghQrBtn" class="secondary">Show QR for other device</button>
+      <button id="ghLinkBtn" class="secondary">Magic link for other device</button>
     </div>
-    <div id="qrBox" style="display:none; margin-top:12px; text-align:center;">
-      <div id="qrCanvas" style="display:inline-block; padding:12px; background:white; border:1px solid var(--border); border-radius:6px;"></div>
-      <p style="font-size:12px; color:var(--muted); margin:8px 0 0 0;">
-        Scan from another device. The token is encoded in the URL fragment — don't share this QR publicly.
+    <div id="linkBox" style="display:none; margin-top:12px;">
+      <input id="magicLink" type="text" readonly style="width:100%; font-family:monospace; font-size:12px;" />
+      <p style="font-size:12px; color:var(--muted); margin:6px 0 0 0;">
+        Copied to clipboard. Open this URL on the other device (or turn it into a QR code) — it auto-saves the token and cleans the URL. Don't share publicly: it contains your PAT.
       </p>
     </div>
     <div class="warn">
-      Token is stored locally in your browser. To set up a new device, click "Show QR" here and scan it from the new device — that opens the page with the token pre-filled.
+      Token is stored locally in your browser. To set up a new device, click "Magic link" here and open the link on the new device — that loads the page with the token pre-filled.
     </div>
   </div>
 </div>
@@ -850,19 +849,18 @@ document.getElementById("ghSaveBtn").onclick = () => {
 };
 document.getElementById("ghPullBtn").onclick = () => pull();
 document.getElementById("ghPushBtn").onclick = () => push();
-document.getElementById("ghQrBtn").onclick = () => {
-  const box = document.getElementById("qrBox");
-  if (box.style.display !== "none") { box.style.display = "none"; return; }
+document.getElementById("ghLinkBtn").onclick = async () => {
   if (!sync.token) { alert("Paste your token and click Save first."); return; }
-  if (location.protocol === "file:") {
-    if (!confirm("You're viewing a local file (file://). The QR will only be useful once this app is hosted (e.g. GitHub Pages). Show anyway?")) return;
-  }
-  const url = location.origin + location.pathname + "#token=" + encodeURIComponent(sync.token);
-  const qr = qrcode(0, "M");
-  qr.addData(url);
-  qr.make();
-  document.getElementById("qrCanvas").innerHTML = qr.createSvgTag({ scalable: true, cellSize: 6, margin: 2 });
+  const base = location.protocol === "file:"
+    ? "https://jonnywebb.github.io/Claudit/"
+    : location.origin + location.pathname;
+  const url = base + "#token=" + encodeURIComponent(sync.token);
+  const box = document.getElementById("linkBox");
+  const input = document.getElementById("magicLink");
+  input.value = url;
   box.style.display = "block";
+  input.select();
+  try { await navigator.clipboard.writeText(url); } catch (e) {}
 };
 
 // On startup: pull if configured, otherwise just render
