@@ -1,1 +1,13 @@
-{"puppies":[],"unit":"oz","lastModified":"2026-05-07T17:22:24Z"}
+{
+  "puppies": [
+    {
+      "id": "movtpbmoppdzv",
+      "name": "Midnight",
+      "dob": "2026-05-01",
+      "color": "#d4756b",
+      "weights": {}
+    }
+  ],
+  "unit": "oz",
+  "lastModified": "2026-05-07T18:32:07.968Z"
+}
